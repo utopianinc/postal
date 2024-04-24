@@ -1,7 +1,38 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  # Legacy API Routes
+
+  # Routes for DomainsController in the LegacyApi namespace
+  #   1. Create Domain
+  # Endpoint: /api/v1/domains
+  # Method: POST
+  # Action: Creates a new domain using provided details such as name and verification method.
+  # It's typically used for initializing domain registration within your system.
+  match "/api/v1/domains", to: "legacy_api/domains#create", via: :post
+
+  # 2. Delete Domain
+  # Endpoint: /api/v1/domains/:id
+  # Method: DELETE
+  # Action: Deletes a specific domain identified by :id from the system.
+  # This action should be secured to ensure only authorized users can delete domains.
+  match "/api/v1/domains/:id", to: "legacy_api/domains#destroy", via: :delete
+
+  # 3. Verify Domain via DNS
+  # Endpoint: /api/v1/domains/:id/verify/dns
+  # Method: POST
+  # Action: Initiates a DNS verification process for a specific domain identified by :id.
+  # This method checks DNS records to validate domain ownership or configuration.
+  match "/api/v1/domains/:id/verify/dns", to: "legacy_api/domains#verify_dns", via: :post
+
+  # 4. Check Domain DNS Settings
+  # Endpoint: /api/v1/domains/:id/check
+  # Method: POST
+  # Action: Checks the DNS settings of a specific domain to ensure they are configured correctly.
+  # This can be used to validate settings like SPF, DKIM, and MX records after setup.
+
+  match "/api/v1/domains/:id/check", to: "legacy_api/domains#check", via: :post
+
+  # Define other Legacy API Routes
   match "/api/v1/send/message" => "legacy_api/send#message", via: [:get, :post, :patch, :put]
   match "/api/v1/send/raw" => "legacy_api/send#raw", via: [:get, :post, :patch, :put]
   match "/api/v1/messages/message" => "legacy_api/messages#message", via: [:get, :post, :patch, :put]
