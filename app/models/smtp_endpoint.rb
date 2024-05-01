@@ -48,7 +48,7 @@ class SMTPEndpoint < ApplicationRecord
   end
 
   def to_smtp_client_server
-    SMTPClient::Server.new(hostname, port: port || 25, ssl_mode: ssl_mode)
+    SMTPClient::Server.new(hostname, port: port || 25, ssl_mode: ssl_mode, username: username, password: password)
   end
 
 end
