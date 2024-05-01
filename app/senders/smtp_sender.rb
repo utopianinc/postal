@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 class SMTPSender < BaseSender
-
+  
   attr_reader :endpoints
 
   # @param domain [String] the domain to send mesages to
@@ -41,17 +41,17 @@ class SMTPSender < BaseSender
     # If we don't have a current endpoint than we should raise an error.
     if @current_endpoint.nil?
       return create_result("SoftFail") do |r|
-        r.retry = true
-        r.details = "No SMTP servers were available for #{@domain}."
-        if @endpoints.empty?
-          r.details += " No hosts to try."
-        else
-          hostnames = @endpoints.map { |e| e.server.hostname }.uniq
-          r.details += " Tried #{hostnames.to_sentence}."
-        end
-        r.output = @connection_errors.join(", ")
-        r.connect_error = true
-      end
+               r.retry = true
+               r.details = "No SMTP servers were available for #{@domain}."
+               if @endpoints.empty?
+                 r.details += " No hosts to try."
+               else
+                 hostnames = @endpoints.map { |e| e.server.hostname }.uniq
+                 r.details += " Tried #{hostnames.to_sentence}."
+               end
+               r.output = @connection_errors.join(", ")
+               r.connect_error = true
+             end
     end
 
     mail_from = determine_mail_from_for_message(message)
@@ -245,9 +245,15 @@ class SMTPSender < BaseSender
       return nil if relays.nil?
 
       relays = relays.filter_map do |relay|
-        next unless relay.host.present?
+        next unless relay[:host].present?
 
-        SMTPClient::Server.new(relay.host, port: relay.port, ssl_mode: relay.ssl_mode)
+        SMTPClient::Server.new(
+          relay[:host],
+          port: relay[:port],
+          ssl_mode: relay[:ssl_mode],
+          username: relay[:username],
+          password: relay[:password]
+        )
       end
 
       @smtp_relays = relays.empty? ? nil : relays

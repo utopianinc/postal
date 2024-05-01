@@ -5,12 +5,14 @@ module SMTPClient
 
     attr_reader :hostname
     attr_reader :port
-    attr_accessor :ssl_mode
+    attr_accessor :ssl_mode, :username, :password
 
-    def initialize(hostname, port: 25, ssl_mode: SSLModes::AUTO)
+    def initialize(hostname, port: 25, ssl_mode: SSLModes::AUTO, username: nil, password: nil)
       @hostname = hostname
       @port = port
       @ssl_mode = ssl_mode
+      @username = username
+      @password = password
     end
 
     # Return all IP addresses for this server by resolving its hostname.
