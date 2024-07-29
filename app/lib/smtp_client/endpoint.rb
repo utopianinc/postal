@@ -105,7 +105,14 @@ module SMTPClient
       raise SMTPSessionNotStartedError if @smtp_client.nil? || (@smtp_client && !@smtp_client.started?)
 
       @smtp_client.rset_errors
-      @smtp_client.send_message(raw_message, mail_from, [rcpt_to])
+      response = @smtp_client.send_message(raw_message, mail_from, [rcpt_to])
+
+      # Conditionally capture and update SES message ID if using SES SMTP relay
+      if using_ses_smtp_relay? && response.success?
+        ses_message_id = response.string.match(/250 Ok (.*)/)[1]
+        puts "SES Message ID: #{ses_message_id}"
+        update_message_id(raw_message, ses_message_id)
+      end
     rescue Errno::ECONNRESET, Errno::EPIPE, OpenSSL::SSL::SSLError
       if retry_on_connection_error
         finish_smtp_session
@@ -114,6 +121,11 @@ module SMTPClient
       end
 
       raise
+    end
+
+    # Helper method to check if the current server is an SES SMTP relay
+    def using_ses_smtp_relay?
+      @server.hostname.include?("amazonaws.com")
     end
 
     # Reset the current SMTP session for this server if possible otherwise
@@ -167,6 +179,16 @@ module SMTPClient
         end
       end
 
+    end
+
+    private
+
+    # Update the local message ID with the SES message ID
+    def update_message_id(raw_message, ses_message_id)
+      mail = Mail.new(raw_message)
+      local_message_id = mail.message_id
+      message = Message.find_by(message_id: local_message_id)
+      message&.update(ses_message_id: ses_message_id)
     end
 
   end
