@@ -101,19 +101,58 @@ module SMTPClient
     # @param retry_on_connection_error [Boolean] whether to retry the connection if there is a connection error
     #
     # @return [void]
-    def send_message(raw_message, mail_from, rcpt_to, retry_on_connection_error: true)
+    def send_message(message, mail_from, rcpt_to, retry_on_connection_error: true)
+      raw_message = message.raw_message
+    
+      # Append the Resent-Sender header to the message if configured
+      if Postal::Config.postal.use_resent_sender_header?
+        raw_message = "Resent-Sender: #{mail_from}\r\n" + raw_message
+      end
+    
       raise SMTPSessionNotStartedError if @smtp_client.nil? || (@smtp_client && !@smtp_client.started?)
-
+    
       @smtp_client.rset_errors
-      @smtp_client.send_message(raw_message, mail_from, [rcpt_to])
-    rescue Errno::ECONNRESET, Errno::EPIPE, OpenSSL::SSL::SSLError
+      response = @smtp_client.send_message(raw_message, mail_from, [rcpt_to])
+    
+      # SES-specific handling
+      if using_ses_smtp_relay?
+        if response.nil?
+          puts "Response is nil, cannot process further"
+          return
+        elsif response.status == "250"
+          if response.string
+            if match_data = response.string.match(/250 Ok (.*)/)
+              ses_message_id = match_data[1]
+              ses_message_id_full = "<#{ses_message_id}@eu-central-1.amazonses.com>"
+    
+              # Add SES Message ID to the headers
+              message.append_headers("X-SES-Message-ID: #{ses_message_id_full}")
+    
+              # Optionally: save the message again if necessary
+              message.save
+            end
+          end
+        end
+      end
+    
+      # Removed explicit return of the response to match the first method's behavior
+    
+    rescue Errno::ECONNRESET, Errno::EPIPE, OpenSSL::SSL::SSLError => e
+      puts "Connection error encountered: #{e.message}"
       if retry_on_connection_error
         finish_smtp_session
         start_smtp_session
-        return send_message(raw_message, mail_from, rcpt_to, retry_on_connection_error: false)
+        return send_message(message, mail_from, rcpt_to, retry_on_connection_error: false)
       end
-
       raise
+    rescue StandardError => e
+      puts "An unexpected error occurred: #{e.message}"
+      raise
+    end
+    
+    # The helper methods remain unchanged
+    def using_ses_smtp_relay?
+      @server.hostname.include?("amazonaws.com")
     end
 
     # Reset the current SMTP session for this server if possible otherwise
