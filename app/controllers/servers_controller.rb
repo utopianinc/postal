@@ -46,6 +46,7 @@ class ServersController < ApplicationController
 
     if current_user.admin?
       extra_params += [
+        :message_id,
         :send_limit,
         :allow_sender,
         :privacy_mode,

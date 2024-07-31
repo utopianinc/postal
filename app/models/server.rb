@@ -282,6 +282,11 @@ class Server < ApplicationRecord
     save!
   end
 
+  def self.find
+    # Return the first server in the database
+    first
+  end
+
   def ip_pool_for_message(message)
     return unless message.scope == "outgoing"
 

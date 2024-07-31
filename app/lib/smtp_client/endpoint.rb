@@ -108,10 +108,12 @@ module SMTPClient
       response = @smtp_client.send_message(raw_message, mail_from, [rcpt_to])
 
       # Conditionally capture and update SES message ID if using SES SMTP relay
-      if using_ses_smtp_relay? && response.success?
-        ses_message_id = response.string.match(/250 Ok (.*)/)[1]
-        puts "SES Message ID: #{ses_message_id}"
-        update_message_id(raw_message, ses_message_id)
+      if using_ses_smtp_relay? && response && response.status == "250"
+        if match_data = response.string.match(/250 Ok (.*)/)
+          ses_message_id = match_data[1]
+          ses_message_id_full = "<#{ses_message_id}@eu-central-1.amazonses.com>"
+          update_message_id(raw_message, ses_message_id_full)
+        end
       end
     rescue Errno::ECONNRESET, Errno::EPIPE, OpenSSL::SSL::SSLError
       if retry_on_connection_error
@@ -185,10 +187,35 @@ module SMTPClient
 
     # Update the local message ID with the SES message ID
     def update_message_id(raw_message, ses_message_id)
-      mail = Mail.new(raw_message)
-      local_message_id = mail.message_id
-      message = Message.find_by(message_id: local_message_id)
-      message&.update(ses_message_id: ses_message_id)
+      # @logger.info("Starting update of message ID with SES message ID: #{ses_message_id}")
+  
+      begin
+        mail = Mail.new(raw_message)
+        local_message_id = mail.message_id
+        # @logger.info("Extracted local message ID: #{local_message_id}")
+  
+        message = find_main_server.message_db.message(local_message_id)
+        if message
+          message.update(message_id: ses_message_id)
+          # @logger.info("Updated message ID to: #{ses_message_id}")
+        else
+          # @logger.warn("Message with local message ID: #{local_message_id} not found")
+        end
+      rescue StandardError => e
+        # @logger.error("An error occurred while updating the message ID: #{e.message}")
+      end
+    end
+  
+    # Find the main server dynamically
+    def find_main_server
+      # @logger.info("Finding the main server")
+      server = ::Server.first
+      if server
+        # @logger.info("Main server found")
+      else
+        # @logger.error("Main server not found")
+      end
+      server
     end
 
   end
