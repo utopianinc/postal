@@ -136,7 +136,7 @@ module SMTPClient
       if retry_on_connection_error
         finish_smtp_session
         start_smtp_session
-        return send_message(message, mail_from, rcpt_to, retry_on_connection_error: false, message: message)
+        return send_message(raw_message, mail_from, rcpt_to, retry_on_connection_error: false, message: message)
       end
       raise
     rescue StandardError => e
