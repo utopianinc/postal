@@ -101,13 +101,7 @@ module SMTPClient
     # @param retry_on_connection_error [Boolean] whether to retry the connection if there is a connection error
     #
     # @return [void]
-    def send_message(message, mail_from, rcpt_to, retry_on_connection_error: true)
-      raw_message = message.raw_message
-    
-      # Append the Resent-Sender header to the message if configured
-      if Postal::Config.postal.use_resent_sender_header?
-        raw_message = "Resent-Sender: #{mail_from}\r\n" + raw_message
-      end
+    def send_message(raw_message, mail_from, rcpt_to, retry_on_connection_error: true, message: nil)
     
       raise SMTPSessionNotStartedError if @smtp_client.nil? || (@smtp_client && !@smtp_client.started?)
     
@@ -142,7 +136,7 @@ module SMTPClient
       if retry_on_connection_error
         finish_smtp_session
         start_smtp_session
-        return send_message(message, mail_from, rcpt_to, retry_on_connection_error: false)
+        return send_message(message, mail_from, rcpt_to, retry_on_connection_error: false, message: message)
       end
       raise
     rescue StandardError => e

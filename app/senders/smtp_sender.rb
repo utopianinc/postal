@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 class SMTPSender < BaseSender
-
   attr_reader :endpoints
 
   # @param domain [String] the domain to send mesages to
@@ -56,10 +55,17 @@ class SMTPSender < BaseSender
 
     mail_from = determine_mail_from_for_message(message)
 
+    raw_message = message.raw_message
+
+    # Append the Resent-Sender header to the mesage to include the
+    # MAIL FROM if the installation is configured to use that?
+    if Postal::Config.postal.use_resent_sender_header?
+      raw_message = "Resent-Sender: #{mail_from}\r\n" + raw_message
+    end
 
     rcpt_to = determine_rcpt_to_for_message(message)
     logger.info "Sending message #{message.server.id}::#{message.id} to #{rcpt_to}"
-    send_message_to_smtp_client(message, mail_from, rcpt_to)
+    send_message_to_smtp_client(raw_message, mail_from, rcpt_to, message: message)
   end
 
   def finish
@@ -78,9 +84,9 @@ class SMTPSender < BaseSender
   # @param retry_on_connection_error [Boolean] if true, we will retry the connection if there is an error
   #
   # @return [SendResult]
-  def send_message_to_smtp_client(message, mail_from, rcpt_to, retry_on_connection_error: true)
+  def send_message_to_smtp_client(raw_message, mail_from, rcpt_to, retry_on_connection_error: true, message: nil)
     start_time = Time.now
-    smtp_result = @current_endpoint.send_message(message, mail_from, [rcpt_to])
+    smtp_result = @current_endpoint.send_message(raw_message, mail_from, [rcpt_to], message: message)
     logger.info "Accepted by #{@current_endpoint} for #{rcpt_to}"
     create_result("Sent", start_time) do |r|
       r.details = "Message for #{rcpt_to} accepted by #{@current_endpoint}"
@@ -246,13 +252,11 @@ class SMTPSender < BaseSender
           port: relay[:port],
           ssl_mode: relay[:ssl_mode],
           username: relay[:username],
-          password: relay[:password]
+          password: relay[:password],
         )
       end
 
       @smtp_relays = relays.empty? ? nil : relays
     end
-
   end
-
 end
