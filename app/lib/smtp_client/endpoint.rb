@@ -135,7 +135,8 @@ module SMTPClient
         end
       end
     
-      response
+      # Removed explicit return of the response to match the first method's behavior
+    
     rescue Errno::ECONNRESET, Errno::EPIPE, OpenSSL::SSL::SSLError => e
       puts "Connection error encountered: #{e.message}"
       if retry_on_connection_error
@@ -149,6 +150,7 @@ module SMTPClient
       raise
     end
     
+    # The helper methods remain unchanged
     def using_ses_smtp_relay?
       @server.hostname.include?("amazonaws.com")
     end

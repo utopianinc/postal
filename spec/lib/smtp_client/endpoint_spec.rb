@@ -8,9 +8,6 @@ module SMTPClient
     let(:ssl_mode) { SSLModes::AUTO }
     let(:server) { Server.new("mx1.example.com", port: 25, ssl_mode: ssl_mode) }
     let(:ip) { "1.2.3.4" }
-    let(:message) { double("message", raw_message: "Test message", headers: {}) }
-    let(:mail_from) { "from@example.com" }
-    let(:rcpt_to) { "to@example.com" }
 
     before do
       allow(Net::SMTP).to receive(:new).and_wrap_original do |original_method, *args|
@@ -164,15 +161,15 @@ module SMTPClient
     describe "#send_message" do
       context "when the smtp client has not been created" do
         it "raises an error" do
-          expect { endpoint.send_message(message, mail_from, rcpt_to) }.to raise_error Endpoint::SMTPSessionNotStartedError
+          expect { endpoint.send_message("", "", "") }.to raise_error Endpoint::SMTPSessionNotStartedError
         end
       end
 
       context "when the smtp client exists but is not started" do
         it "raises an error" do
           endpoint.start_smtp_session
-          allow(endpoint.smtp_client).to receive(:started?).and_return(false)
-          expect { endpoint.send_message(message, mail_from, rcpt_to) }.to raise_error Endpoint::SMTPSessionNotStartedError
+          expect(endpoint.smtp_client).to receive(:started?).and_return(false)
+          expect { endpoint.send_message("", "", "") }.to raise_error Endpoint::SMTPSessionNotStartedError
         end
       end
 
@@ -183,34 +180,36 @@ module SMTPClient
 
         it "resets any previous errors" do
           expect(endpoint.smtp_client).to receive(:rset_errors)
-          endpoint.send_message(message, mail_from, rcpt_to)
+          endpoint.send_message("test message", "from@example.com", "to@example.com")
         end
 
         it "sends the message to the SMTP client" do
-          endpoint.send_message(message, mail_from, rcpt_to)
-          expect(endpoint.smtp_client).to have_received(:send_message).with("Test message", "from@example.com", ["to@example.com"])
+          endpoint.send_message("test message", "from@example.com", "to@example.com")
+          expect(endpoint.smtp_client).to have_received(:send_message).with("test message", "from@example.com", ["to@example.com"])
         end
 
         context "when the connection is reset during sending" do
           before do
             endpoint.start_smtp_session
-            allow(endpoint.smtp_client).to receive(:send_message).and_raise(Errno::ECONNRESET)
+            allow(endpoint.smtp_client).to receive(:send_message) do
+              raise Errno::ECONNRESET
+            end
           end
 
           it "closes the SMTP client" do
             expect(endpoint).to receive(:finish_smtp_session).and_call_original
-            expect { endpoint.send_message(message, mail_from, rcpt_to) }.to raise_error(Errno::ECONNRESET)
+            endpoint.send_message("test message", "", "")
           end
 
           it "retries sending the message once" do
             expect(endpoint).to receive(:send_message).twice.and_call_original
-            expect { endpoint.send_message(message, mail_from, rcpt_to) }.to raise_error(Errno::ECONNRESET)
+            endpoint.send_message("test message", "", "")
           end
 
           context "if the retry also fails" do
             it "raises the error" do
               allow(endpoint).to receive(:send_message).and_raise(Errno::ECONNRESET)
-              expect { endpoint.send_message(message, mail_from, rcpt_to) }.to raise_error(Errno::ECONNRESET)
+              expect { endpoint.send_message("test message", "", "") }.to raise_error(Errno::ECONNRESET)
             end
           end
         end
@@ -290,4 +289,5 @@ module SMTPClient
       end
     end
   end
+
 end
