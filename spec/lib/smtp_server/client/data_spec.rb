@@ -3,7 +3,6 @@
 require "rails_helper"
 
 module SMTPServer
-
   describe Client do
     let(:ip_address) { "1.2.3.4" }
     subject(:client) { described_class.new(ip_address) }
@@ -39,7 +38,7 @@ module SMTPServer
         client.handle("RCPT TO: #{route.name}@#{route.domain.name}")
         Timecop.freeze do
           client.handle("DATA")
-          expect(client.headers["received"]).to include "from test.example.com (1.2.3.4 [1.2.3.4]) by #{Postal::Config.postal.smtp_hostname} with SMTP; #{Time.now.utc.rfc2822}"
+          expect(client.headers["received"]).to include "from SMTP (1.2.3.4 [1.2.3.4]) by #{Postal::Config.postal.smtp_hostname} with SMTP; #{Time.now.utc.rfc2822}"
         end
       end
 
@@ -75,7 +74,7 @@ module SMTPServer
             client.handle("This is some content for the message.")
             client.handle("It will keep going.")
             expect(client.instance_variable_get("@data")).to eq <<~DATA
-              Received: from test.example.com (1.2.3.4 [1.2.3.4]) by #{Postal::Config.postal.smtp_hostname} with SMTP; #{Time.now.utc.rfc2822}\r
+              Received: from SMTP (1.2.3.4 [1.2.3.4]) by #{Postal::Config.postal.smtp_hostname} with SMTP; #{Time.now.utc.rfc2822}\r
               Subject: Test\r
               \r
               This is some content for the message.\r
@@ -86,5 +85,4 @@ module SMTPServer
       end
     end
   end
-
 end
