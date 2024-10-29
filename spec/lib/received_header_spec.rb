@@ -11,7 +11,7 @@ describe ReceivedHeader do
     context "when server is nil" do
       it "returns the correct string" do
         result = described_class.generate(nil, "testhelo", "1.1.1.1", :smtp)
-        expect(result).to eq "from testhelo (hostname.com [1.1.1.1]) " \
+        expect(result).to eq "from SMTP (hostname.com [1.1.1.1]) " \
                              "by #{Postal::Config.postal.smtp_hostname} " \
                              "with SMTP; #{Time.now.utc.rfc2822}"
       end
@@ -30,7 +30,7 @@ describe ReceivedHeader do
       it "returns the correct string" do
         server = Server.new(privacy_mode: false)
         result = described_class.generate(server, "testhelo", "1.1.1.1", :smtp)
-        expect(result).to eq "from testhelo (hostname.com [1.1.1.1]) " \
+        expect(result).to eq "from SMTP (hostname.com [1.1.1.1]) " \
                              "by #{Postal::Config.postal.smtp_hostname} " \
                              "with SMTP; #{Time.now.utc.rfc2822}"
       end
@@ -39,9 +39,9 @@ describe ReceivedHeader do
     context "when type is http" do
       it "returns the correct string" do
         result = described_class.generate(nil, "web-ui", "1.1.1.1", :http)
-        expect(result).to eq "from web-ui (hostname.com [1.1.1.1]) " \
+        expect(result).to eq "from SMTP (hostname.com [1.1.1.1]) " \
                              "by #{Postal::Config.postal.web_hostname} " \
-                             "with HTTP; #{Time.now.utc.rfc2822}"
+                             "with SMTP; #{Time.now.utc.rfc2822}"
       end
     end
   end

@@ -196,7 +196,7 @@ RSpec.describe "Legacy Send API", type: :request do
             parsed_body = JSON.parse(response.body)
             message_id = parsed_body["data"]["messages"]["test@example.com"]["id"]
             message = server.message(message_id)
-            expect(message.headers["received"].first).to match(/\Afrom api/)
+            expect(message.headers["received"].first).to match(/\Afrom SMTP/)
           end
 
           it "creates appropriate message objects" do

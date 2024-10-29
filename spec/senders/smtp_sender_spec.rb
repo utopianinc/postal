@@ -263,7 +263,7 @@ RSpec.describe SMTPSender do
             sender.send_message(message)
             expect(sender.endpoints.last).to have_received(:send_message).with(
               kind_of(String),
-              "#{server.token}@#{domain.return_path_domain}",
+              message.from_address,
               ["john@example.com"]
             )
           end
