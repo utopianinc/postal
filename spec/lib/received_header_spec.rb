@@ -41,7 +41,7 @@ describe ReceivedHeader do
         result = described_class.generate(nil, "web-ui", "1.1.1.1", :http)
         expect(result).to eq "from web-ui (hostname.com [1.1.1.1]) " \
                              "by #{Postal::Config.postal.web_hostname} " \
-                             "with HTTP; #{Time.now.utc.rfc2822}"
+                             "with SMTP; #{Time.now.utc.rfc2822}"
       end
     end
   end
