@@ -258,11 +258,12 @@ RSpec.describe SMTPSender do
 
         context "if the domain has a valid custom return path" do
           let(:domain) { create(:domain, server: server, return_path_status: "OK") }
-
-          before do
-            allow(message).to receive(:bounce).and_return(false)
-            allow(message).to receive(:from_address).and_return("test@example.com")
-            allow(message).to receive(:rcpt_to).and_return("john@example.com")
+          let(:message) do
+            MessageFactory.outgoing(server, domain: domain) do |msg|
+              msg.bounce = false
+              msg.mail_from = "test@example.com"
+              msg.rcpt_to = "john@example.com"
+            end
           end
 
           it "sends using the from_address as MAIL FROM" do
@@ -562,9 +563,9 @@ RSpec.describe SMTPSender do
                                                                          Hashie::Mash.new(host: "test2.example.com", port: 2525, ssl_mode: "TLS"),
                                                                        ])
       expect(described_class.smtp_relays).to match [
-              have_attributes(hostname: "test.example.com", port: 25, ssl_mode: "Auto"),
-              have_attributes(hostname: "test2.example.com", port: 2525, ssl_mode: "TLS"),
-            ]
+                                                     have_attributes(hostname: "test.example.com", port: 25, ssl_mode: "Auto"),
+                                                     have_attributes(hostname: "test2.example.com", port: 2525, ssl_mode: "TLS"),
+                                                   ]
     end
   end
 end
