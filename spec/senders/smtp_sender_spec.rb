@@ -257,20 +257,17 @@ RSpec.describe SMTPSender do
         end
 
         context "if the domain has a valid custom return path" do
-          let(:domain) { create(:domain, server: server, return_path_status: "OK", return_path_domain: "return.example.com") }
+          let(:domain) { create(:domain, server: server, return_path_status: "OK") }
           let(:from_address) { "test@example.com" }
           let(:message) do
             MessageFactory.outgoing(server, domain: domain) do |msg|
               msg.bounce = false
               msg.mail_from = from_address
-              msg.from_address = from_address  # Make sure this is set explicitly
+              msg.from_address = from_address
               msg.rcpt_to = "john@example.com"
+              # Force the message to use our from_address
+              allow(msg).to receive(:from_address).and_return(from_address)
             end
-          end
-
-          before do
-            # Explicitly allow from_address to be read
-            allow(message).to receive(:from_address).and_return(from_address)
           end
 
           it "sends using the from_address as MAIL FROM" do
