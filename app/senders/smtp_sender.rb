@@ -150,15 +150,14 @@ class SMTPSender < BaseSender
     return "" if message.bounce
 
     # Attempt to use the sender's email address directly as the Return-Path
-    sender_email = message.from_address
-    return sender_email if sender_email.present?
+    sender_email = message.from_address.to_s
+    if sender_email.present? && sender_email.match?(/\A[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\z/)
+      return sender_email
+    end
 
-    # If the sender's email is not available, use the existing logic as a fallback
-
-    # If the domain has a valid custom return path configured, return
-    # that.
+    # If the sender's email is not available or invalid, use the existing logic as a fallback
     if message.domain.return_path_status == "OK"
-      return message.from_address
+      return "#{message.server.token}@#{message.domain.return_path_domain}"
     end
 
     "#{message.server.token}@#{Postal::Config.dns.return_path_domain}"

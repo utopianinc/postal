@@ -58,7 +58,7 @@ RSpec.describe SMTPSender do
           expect(endpoint).to be_a SMTPClient::Endpoint
           expect(endpoint).to have_attributes(
             ip_address: "1.2.3.4",
-            server: have_attributes(hostname: "mx1.example.com", port: 25, ssl_mode: SMTPClient::SSLModes::AUTO)
+            server: have_attributes(hostname: "mx1.example.com", port: 25, ssl_mode: SMTPClient::SSLModes::AUTO),
           )
         end
       end
@@ -74,7 +74,7 @@ RSpec.describe SMTPSender do
           expect(endpoint).to be_a SMTPClient::Endpoint
           expect(endpoint).to have_attributes(
             ip_address: "1.2.3.4",
-            server: have_attributes(hostname: "example.com", port: 25, ssl_mode: SMTPClient::SSLModes::AUTO)
+            server: have_attributes(hostname: "example.com", port: 25, ssl_mode: SMTPClient::SSLModes::AUTO),
           )
         end
       end
@@ -102,7 +102,7 @@ RSpec.describe SMTPSender do
         expect(endpoint).to be_a SMTPClient::Endpoint
         expect(endpoint).to have_attributes(
           ip_address: "1.2.3.4",
-          server: have_attributes(hostname: "relay.example.com", port: 2525, ssl_mode: SMTPClient::SSLModes::TLS)
+          server: have_attributes(hostname: "relay.example.com", port: 2525, ssl_mode: SMTPClient::SSLModes::TLS),
         )
       end
     end
@@ -121,7 +121,7 @@ RSpec.describe SMTPSender do
         expect(endpoint).to be_a SMTPClient::Endpoint
         expect(endpoint).to have_attributes(
           ip_address: "1.2.3.4",
-          server: server
+          server: server,
         )
       end
     end
@@ -141,7 +141,7 @@ RSpec.describe SMTPSender do
         expect(endpoint).to be_a SMTPClient::Endpoint
         expect(endpoint).to have_attributes(
           ip_address: "1.2.3.4",
-          server: server
+          server: server,
         )
       end
     end
@@ -174,7 +174,7 @@ RSpec.describe SMTPSender do
         expect(endpoint).to be_a SMTPClient::Endpoint
         expect(endpoint).to have_attributes(
           ip_address: "2.3.4.5",
-          server: have_attributes(hostname: "custom2.example.com")
+          server: have_attributes(hostname: "custom2.example.com"),
         )
       end
 
@@ -234,7 +234,7 @@ RSpec.describe SMTPSender do
           retry: true,
           output: "",
           details: /No SMTP servers were available for example.com. No hosts to try./,
-          connect_error: true
+          connect_error: true,
         )
       end
     end
@@ -257,13 +257,14 @@ RSpec.describe SMTPSender do
         end
 
         context "if the domain has a valid custom return path" do
-          let(:domain) { create(:domain, return_path_status: "OK") }
+          let(:domain) { create(:domain, server: server, return_path_status: "OK") }
+          let(:message) { MessageFactory.outgoing(server, domain: domain) }
 
-          it "sends the custom return path as MAIL FROM" do
+          it "sends using the server token and return path domain" do
             sender.send_message(message)
             expect(sender.endpoints.last).to have_received(:send_message).with(
               kind_of(String),
-              message.from_address,
+              "#{server.token}@#{domain.return_path_domain}",
               ["john@example.com"]
             )
           end
@@ -338,7 +339,7 @@ RSpec.describe SMTPSender do
           expect(result).to have_attributes(
             type: "Sent",
             details: "Message for john@example.com accepted by 1.2.3.4:25 (mx1.example.com)",
-            output: "accepted"
+            output: "accepted",
           )
         end
       end
@@ -352,7 +353,7 @@ RSpec.describe SMTPSender do
           expect(result).to have_attributes(
             type: "SoftFail",
             retry: true,
-            details: /Temporary SMTP delivery error when sending/
+            details: /Temporary SMTP delivery error when sending/,
           )
         end
 
@@ -370,7 +371,7 @@ RSpec.describe SMTPSender do
           expect(result).to be_a SendResult
           expect(result).to have_attributes(
             type: "SoftFail",
-            retry: 40
+            retry: 40,
           )
         end
       end
@@ -383,7 +384,7 @@ RSpec.describe SMTPSender do
           expect(result).to be_a SendResult
           expect(result).to have_attributes(
             type: "SoftFail",
-            retry: 310
+            retry: 310,
           )
         end
       end
@@ -396,7 +397,7 @@ RSpec.describe SMTPSender do
           expect(result).to be_a SendResult
           expect(result).to have_attributes(
             type: "SoftFail",
-            details: /Temporary SMTP delivery error when sending/
+            details: /Temporary SMTP delivery error when sending/,
           )
         end
 
@@ -414,7 +415,7 @@ RSpec.describe SMTPSender do
           expect(result).to be_a SendResult
           expect(result).to have_attributes(
             type: "SoftFail",
-            details: /Temporary SMTP delivery error when sending/
+            details: /Temporary SMTP delivery error when sending/,
           )
         end
 
@@ -433,7 +434,7 @@ RSpec.describe SMTPSender do
           expect(result).to have_attributes(
             type: "SoftFail",
             output: "Syntax error",
-            details: /Temporary SMTP delivery error when sending/
+            details: /Temporary SMTP delivery error when sending/,
           )
         end
 
@@ -452,7 +453,7 @@ RSpec.describe SMTPSender do
           expect(result).to have_attributes(
             type: "SoftFail",
             output: "unknown error",
-            details: /Temporary SMTP delivery error when sending/
+            details: /Temporary SMTP delivery error when sending/,
           )
         end
 
@@ -471,7 +472,7 @@ RSpec.describe SMTPSender do
           expect(result).to have_attributes(
             type: "HardFail",
             output: "fatal error",
-            details: /Permanent SMTP delivery error when sending/
+            details: /Permanent SMTP delivery error when sending/,
           )
         end
 
@@ -490,7 +491,7 @@ RSpec.describe SMTPSender do
           expect(result).to have_attributes(
             type: "SoftFail",
             output: "divided by 0",
-            details: /An error occurred while sending the message/
+            details: /An error occurred while sending the message/,
           )
         end
 
@@ -556,9 +557,9 @@ RSpec.describe SMTPSender do
                                                                          Hashie::Mash.new(host: "test2.example.com", port: 2525, ssl_mode: "TLS"),
                                                                        ])
       expect(described_class.smtp_relays).to match [
-        have_attributes(hostname: "test.example.com", port: 25, ssl_mode: "Auto"),
-        have_attributes(hostname: "test2.example.com", port: 2525, ssl_mode: "TLS"),
-      ]
+                                                     have_attributes(hostname: "test.example.com", port: 25, ssl_mode: "Auto"),
+                                                     have_attributes(hostname: "test2.example.com", port: 2525, ssl_mode: "TLS"),
+                                                   ]
     end
   end
 end
